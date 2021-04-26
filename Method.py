@@ -1,11 +1,10 @@
 import math
-from decimal import Decimal
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-def delta_func(e):
-    return np.sign(2e6 * math.cos(e * h))
+def delta_func(e, pe):
+    return np.sign(e - pe)
 
 
 def cth(arg):
@@ -26,17 +25,17 @@ def func_p_e(e):
 
 
 # Необратимая часть
-def func_p_o(p_0, t):
-    return (p_inf(p_0, func_e(t)) - p_0) / (delta_func(func_e(t)) * k - alpha * (p_inf(p_0, func_e(t)) - p_0))
+def func_p_o(p_0, t, pe):
+    return (p_inf(p_0, func_e(t)) - p_0) / (delta_func(func_e(t), pe) * k - alpha * (p_inf(p_0, func_e(t)) - p_0))
 
 
-def rk4(p_e, t, h):
+def rk4(p_e, t, h, pe):
     """ Runge-Kutta 4 method """
-    k1 = h * func_p_o(p_e, t)
-    k2 = h * func_p_o(p_e + 0.5 * k1, t + 0.5 * h)
-    k3 = h * func_p_o(p_e + 0.5 * k2, t + 0.5 * h)
-    k4 = h * func_p_o(p_e + k3, t + h)
-    return (k1 + 2 * k2 + 2 * k3 + k4) / 6
+    k1 = h * func_p_o(p_e, t, pe)
+    k2 = h * func_p_o(p_e + 0.5 * k1, t + 0.5 * h, pe)
+    k3 = h * func_p_o(p_e + 0.5 * k2, t + 0.5 * h, pe)
+    k4 = h * func_p_o(p_e + k3, t + h, pe)
+    return pe + ((k1 + 2 * k2 + 2 * k3 + k4) / 6)*100000
 
 
 x = 0
@@ -49,28 +48,28 @@ E_MAX = 2e6
 
 # t  in [0,3*math.pi]
 t_start = 0
-t_end = 3*math.pi
+t_end = 3 * math.pi
 n = 100
 h = (t_end - t_start) / n
 
 p_e_points = [0]
 p_0_points = [0]
-p_points = [1]
+p_points = [0]
 t_array = [0]
 e_array = [0]
 test_array = [1]
 
 for i in range(1, n):
-    p_0_points.append(rk4(x, i, h))
-    p_e_points.append(func_p_e(func_e(i*h)))
-    t_array.append(h*i)
-    e_array.append(func_e(i*h))
-    p_points.append(rk4(x, i, h) + func_p_e(func_e(i*h)))
-for j in range(1,n):
-    test_array.append(np.sign(2e6 * math.cos(j*h)))
-print(p_e_points)
+    p_0_points.append(rk4(x, i, h, p_0_points[i - 1]) )
+    p_e_points.append(func_p_e(func_e(i * h)))
+    t_array.append(h * i)
+    e_array.append(func_e(i * h))
+    p_points.append(p_0_points[i] + p_e_points[i])
+for j in range(1, n):
+    test_array.append(np.sign(2e6 * math.cos(j * h)))
 fig, ax = plt.subplots()
-ax.plot(e_array, p_e_points)
+ax.plot(e_array, p_points)
+
 plt.xlabel("OE")
 plt.ylabel("OP")
 plt.title("Hysteresis loop")
